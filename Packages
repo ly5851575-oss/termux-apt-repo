@@ -1,0 +1,11 @@
+Package: checktool
+Version: 1.0.0
+Architecture: all
+Maintainer: Ali <ali@example.com>
+Filename: ./checktool.deb
+Size: 744
+MD5sum: d885fd7237249a88fff76bc724829a49
+SHA1: 4055f0717493ddd843f7c1ab30ca20114214e194
+SHA256: d4ebfeca0db1b4eaa70270dcf5467bb5f5609baf004780ef673f566aa89e762e
+Description: My tool
+
