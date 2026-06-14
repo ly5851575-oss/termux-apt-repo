@@ -1,0 +1,194 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+# checktool: مُثبّت أدوات مساعدة لـ Termux
+# استخدم الأدوات فقط على الأنظمة والشبكات التي تملكها أو لديك تصريح لاختبارها.
+
+set -u
+
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[1;36m'
+RESET='\033[0m'
+
+info()    { printf "%b[•]%b %s\n" "$CYAN" "$RESET" "$*"; }
+success() { printf "%b[✓]%b %s\n" "$GREEN" "$RESET" "$*"; }
+warn()    { printf "%b[!]%b %s\n" "$YELLOW" "$RESET" "$*"; }
+error()   { printf "%b[✗]%b %s\n" "$RED" "$RESET" "$*" >&2; }
+
+printf "%b" "$GREEN"
+printf '%s\n' '=============================================='
+printf '%s\n' '               CheckTool'
+printf '%s\n' '     تجهيز أدوات Termux المساعدة تلقائياً'
+printf '%s\n' '=============================================='
+printf "%b\n" "$RESET"
+
+if ! command -v pkg >/dev/null 2>&1; then
+  error "هذا السكربت مخصص لتطبيق Termux ولا يمكن العثور على الأمر pkg."
+  exit 1
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+
+is_package_installed() {
+  dpkg-query -W -f='${Status}' "$1" 2>/dev/null \
+    | grep -q '^install ok installed$'
+}
+
+enable_repository() {
+  local repository="$1"
+
+  if is_package_installed "$repository"; then
+    success "المستودع مفعّل مسبقاً: $repository"
+    return 0
+  fi
+
+  info "تفعيل المستودع: $repository"
+
+  if pkg install -y "$repository" >/dev/null 2>&1; then
+    success "تم تفعيل المستودع: $repository"
+    return 0
+  fi
+
+  error "تعذر تفعيل المستودع: $repository"
+  return 1
+}
+
+# تفعيل قنوات Termux الإضافية قبل البحث عن الحزم.
+enable_repository root-repo || true
+enable_repository x11-repo || true
+
+info "تحديث فهارس الحزم..."
+if apt-get update -qq >/dev/null 2>&1; then
+  success "تم تحديث فهارس الحزم."
+else
+  warn "اكتمل التحديث مع تحذيرات. سيستمر الفحص باستخدام الفهارس المتاحة."
+fi
+
+declare -A TOOL_LABELS=(
+  [hydra]='Hydra'
+  [john]='John the Ripper'
+  [hashcat]='Hashcat'
+  [sqlmap]='SQLmap'
+  [metasploit]='Metasploit'
+  [aircrack]='Aircrack-ng'
+  [nikto]='Nikto'
+  [impacket]='Impacket'
+)
+
+declare -A TOOL_COMMANDS=(
+  [hydra]='hydra'
+  [john]='john'
+  [hashcat]='hashcat'
+  [sqlmap]='sqlmap'
+  [metasploit]='msfconsole'
+  [aircrack]='aircrack-ng'
+  [nikto]='nikto'
+  [impacket]='impacket-smbclient'
+)
+
+# توضع الأسماء الأكثر احتمالاً أولاً، ثم الأسماء البديلة.
+declare -A TOOL_PACKAGES=(
+  [hydra]='hydra'
+  [john]='johnripper john'
+  [hashcat]='hashcat'
+  [sqlmap]='sqlmap'
+  [metasploit]='metasploit'
+  [aircrack]='aircrack-ng'
+  [nikto]='nikto'
+  [impacket]='python-impacket impacket'
+)
+
+TOOL_ORDER=(
+  hydra
+  john
+  hashcat
+  sqlmap
+  metasploit
+  aircrack
+  nikto
+  impacket
+)
+
+tool_is_ready() {
+  local key="$1"
+  local command_name="${TOOL_COMMANDS[$key]}"
+  local package_name
+
+  if command -v "$command_name" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  # بعض حزم Impacket قد تثبت الوحدة البرمجية بأسماء أوامر مختلفة.
+  if [ "$key" = 'impacket' ] \
+    && command -v python >/dev/null 2>&1 \
+    && python -c 'import impacket' >/dev/null 2>&1; then
+    return 0
+  fi
+
+  # Nikto قد يظهر أحياناً باسم nikto.pl.
+  if [ "$key" = 'nikto' ] && command -v nikto.pl >/dev/null 2>&1; then
+    return 0
+  fi
+
+  for package_name in ${TOOL_PACKAGES[$key]}; do
+    if is_package_installed "$package_name"; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+install_tool() {
+  local key="$1"
+  local label="${TOOL_LABELS[$key]}"
+  local package_name
+  local log_file="${TMPDIR:-$PREFIX/tmp}/checktool-${key}-install.log"
+
+  if tool_is_ready "$key"; then
+    success "$label مثبت مسبقاً؛ تم التخطي."
+    return 0
+  fi
+
+  for package_name in ${TOOL_PACKAGES[$key]}; do
+    info "محاولة تثبيت $label باستخدام الحزمة: $package_name"
+
+    if pkg install -y "$package_name" >"$log_file" 2>&1; then
+      if tool_is_ready "$key"; then
+        success "تم تثبيت $label بنجاح عبر: $package_name"
+        return 0
+      fi
+    fi
+  done
+
+  error "تعذر تثبيت $label من الحزم الرسمية المتاحة."
+  warn "سجل آخر محاولة: $log_file"
+  return 1
+}
+
+INSTALLED_COUNT=0
+FAILED_COUNT=0
+FAILED_TOOLS=()
+
+for tool_key in "${TOOL_ORDER[@]}"; do
+  if install_tool "$tool_key"; then
+    INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
+  else
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+    FAILED_TOOLS+=("${TOOL_LABELS[$tool_key]}")
+  fi
+done
+
+printf '\n%b%s%b\n' "$CYAN" '================ النتيجة ================' "$RESET"
+printf 'الأدوات الجاهزة: %d\n' "$INSTALLED_COUNT"
+printf 'الأدوات التي تعذر تجهيزها: %d\n' "$FAILED_COUNT"
+
+if [ "$FAILED_COUNT" -gt 0 ]; then
+  printf 'غير المتاح حالياً: %s\n' "${FAILED_TOOLS[*]}"
+  warn "قد لا تكون بعض الحزم متوفرة لإصدار Termux أو معمارية جهازك الحالية."
+else
+  success "جميع الأدوات أصبحت جاهزة."
+fi
+
+printf '\n'
