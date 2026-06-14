@@ -1,11 +1,11 @@
 Package: checktool
 Version: 1.0.0
 Architecture: all
-Maintainer: Ali <ali@example.com>
+Maintainer: Ali
 Filename: ./checktool.deb
-Size: 744
-MD5sum: d885fd7237249a88fff76bc724829a49
-SHA1: 4055f0717493ddd843f7c1ab30ca20114214e194
-SHA256: d4ebfeca0db1b4eaa70270dcf5467bb5f5609baf004780ef673f566aa89e762e
-Description: My tool
+Size: 928
+MD5sum: 196b8134345145ad0f95ab91a6dbbf6a
+SHA1: 574ecc15be9c0748bf6f11b9c642835b2545bccf
+SHA256: 421d2985c5f52ab7b25d3d6b3a22904445101c24a00f1d984241ba6b2d5bb805
+Description: Check Tool for Termux
 
