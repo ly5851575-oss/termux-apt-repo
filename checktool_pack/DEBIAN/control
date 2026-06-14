@@ -1,0 +1,7 @@
+Package: checktool
+Version: 1.2.0
+Architecture: all
+Maintainer: Ali
+Depends: bash, coreutils, apt
+Homepage: https://github.com/ly5851575-oss/termux-apt-repo
+Description: CheckTool installer and diagnostics for Termux security utilities
