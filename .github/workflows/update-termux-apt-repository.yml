@@ -1,0 +1,200 @@
+name: Update Termux APT Repository
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**/*.deb"
+      - ".github/workflows/update-termux-apt-repository.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: termux-apt-repository
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and publish repository files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Install repository tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev gzip rsync
+
+      - name: Prepare repository files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          rm -rf public gh-pages-branch
+          mkdir -p public
+
+          # Preserve packages that were published previously.
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git clone \
+              --depth 1 \
+              --branch gh-pages \
+              "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+              gh-pages-branch
+
+            find gh-pages-branch \
+              -maxdepth 1 \
+              -type f \
+              -name "*.deb" \
+              -exec cp -f "{}" public/ \;
+          else
+            mkdir -p gh-pages-branch
+          fi
+
+          # Find newly uploaded packages from main.
+          find . \
+            -type f \
+            -name "*.deb" \
+            -not -path "./.git/*" \
+            -not -path "./public/*" \
+            -not -path "./gh-pages-branch/*" \
+            -print0 > /tmp/new-deb-packages.list
+
+          while IFS= read -r -d '' package; do
+            echo "Adding package: ${package}"
+            cp -f "${package}" public/
+          done < /tmp/new-deb-packages.list
+
+          cd public
+
+          shopt -s nullglob
+          packages=(./*.deb)
+
+          if [ ${#packages[@]} -gt 0 ]; then
+            dpkg-scanpackages --multiversion . /dev/null > Packages
+          else
+            : > Packages
+          fi
+
+          gzip -9c Packages > Packages.gz
+          touch .nojekyll
+
+          cat > index.html <<'HTML'
+          <!DOCTYPE html>
+          <html lang="ar" dir="rtl">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Termux APT Repository</title>
+            <style>
+              body { max-width: 760px; margin: 60px auto; padding: 20px; font-family: Arial, sans-serif; background: #111827; color: #f9fafb; }
+              .box { background: #1f2937; padding: 30px; border-radius: 16px; }
+              a { color: #60a5fa; }
+              code { direction: ltr; display: block; text-align: left; padding: 15px; margin-top: 20px; overflow-wrap: anywhere; background: #030712; border-radius: 8px; }
+            </style>
+          </head>
+          <body>
+            <div class="box">
+              <h1>Termux APT Repository</h1>
+              <p>المستودع يعمل بنجاح.</p>
+              <p><a href="Packages">Packages</a> | <a href="Packages.gz">Packages.gz</a></p>
+              <code>deb [trusted=yes] https://ly5851575-oss.github.io/termux-apt-repo/ ./</code>
+            </div>
+          </body>
+          </html>
+          HTML
+
+          echo "Published files:"
+          ls -lah
+
+      - name: Publish files to gh-pages branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -d gh-pages-branch/.git ]; then
+            rm -rf gh-pages-branch
+            mkdir -p gh-pages-branch
+
+            git -C gh-pages-branch init
+            git -C gh-pages-branch switch --orphan gh-pages
+            git -C gh-pages-branch remote add origin \
+              "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          fi
+
+          rsync -a \
+            --delete \
+            --exclude=".git/" \
+            public/ \
+            gh-pages-branch/
+
+          git -C gh-pages-branch config user.name "github-actions[bot]"
+          git -C gh-pages-branch config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C gh-pages-branch add --all
+
+          if git -C gh-pages-branch rev-parse --verify HEAD >/dev/null 2>&1 && \
+             git -C gh-pages-branch diff --cached --quiet; then
+            echo "No changes to publish."
+          else
+            git -C gh-pages-branch commit -m "Update Termux packages"
+            git -C gh-pages-branch push origin HEAD:gh-pages
+          fi
+
+      - name: Remove transferred packages from main
+        run: |
+          set -euo pipefail
+
+          if [ -s /tmp/new-deb-packages.list ]; then
+            while IFS= read -r -d '' package; do
+              if [ -f "${package}" ]; then
+                echo "Removing from main: ${package}"
+                rm -f "${package}"
+              fi
+            done < /tmp/new-deb-packages.list
+
+            git config user.name "github-actions[bot]"
+            git config user.email \
+              "41898282+github-actions[bot]@users.noreply.github.com"
+            git add --update
+
+            if git diff --cached --quiet; then
+              echo "No package files need removal from main."
+            else
+              git commit -m "Move packages to gh-pages [skip ci]"
+              git push origin main
+            fi
+          else
+            echo "No new .deb packages found in main."
+          fi
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+
+  deploy:
+    name: Deploy GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
