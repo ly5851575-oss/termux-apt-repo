@@ -17,8 +17,8 @@ case "${1:-}" in
     cat <<'HELP'
 Usage:
   checktool            Install native Termux tools and safe upstream fallbacks.
-  checktool --debian   Also install large Debian/proot fallbacks for John,
-                       Hashcat and Aircrack-ng when unavailable natively.
+  checktool --debian   Also install Debian/proot fallbacks for tools that are
+                       unavailable natively.
 HELP
     exit 0
     ;;
@@ -51,7 +51,6 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
-# Remove only obsolete backups previously created by CheckTool.
 rm -f "$PREFIX/etc/apt/sources.list.d"/checktool.list.bak.* 2>/dev/null || true
 
 package_installed() {
@@ -95,7 +94,11 @@ fi
 
 install_prerequisites() {
   local log="$LOG_DIR/prerequisites.log"
-  local packages=(git curl ca-certificates python python-pip perl clang make pkg-config openssl libffi rust)
+  local packages=(
+    git curl ca-certificates
+    python python-pip perl
+    clang make pkg-config openssl libffi rust
+  )
   local available=()
   local p
 
@@ -112,6 +115,74 @@ install_prerequisites() {
 }
 
 install_prerequisites
+
+declare -A TOOL_LABELS=(
+  [hydra]='Hydra'
+  [john]='John the Ripper'
+  [hashcat]='Hashcat'
+  [sqlmap]='SQLmap'
+  [metasploit]='Metasploit'
+  [aircrack]='Aircrack-ng'
+  [nikto]='Nikto'
+  [impacket]='Impacket'
+  [nessus]='Tenable Nessus'
+  [burpsuite]='Burp Suite Pro/Community'
+  [openvas]='OpenVAS Scanner'
+  [zaproxy]='OWASP ZAP Proxy'
+  [wireshark]='Wireshark Network Analyzer'
+  [sonarqube]='SonarQube Code Analyzer'
+)
+
+declare -A TOOL_COMMANDS=(
+  [hydra]='hydra'
+  [john]='john'
+  [hashcat]='hashcat'
+  [sqlmap]='sqlmap'
+  [metasploit]='msfconsole'
+  [aircrack]='aircrack-ng'
+  [nikto]='nikto'
+  [impacket]='impacket-smbclient'
+  [nessus]='nessus'
+  [burpsuite]='burpsuite'
+  [openvas]='openvas'
+  [zaproxy]='zaproxy'
+  [wireshark]='wireshark'
+  [sonarqube]='sonar-scanner'
+)
+
+declare -A TOOL_PACKAGES=(
+  [hydra]='hydra'
+  [john]='johnripper john'
+  [hashcat]='hashcat'
+  [sqlmap]='sqlmap'
+  [metasploit]='metasploit'
+  [aircrack]='aircrack-ng'
+  [nikto]='nikto'
+  [impacket]='python-impacket impacket'
+  [nessus]='nessus'
+  [burpsuite]='burpsuite'
+  [openvas]='openvas gvm'
+  [zaproxy]='zaproxy zap'
+  [wireshark]='wireshark-qt tshark wireshark'
+  [sonarqube]='sonarqube sonar-scanner sonar-scanner-cli'
+)
+
+TOOL_ORDER=(
+  hydra
+  john
+  hashcat
+  sqlmap
+  metasploit
+  aircrack
+  nikto
+  impacket
+  nessus
+  burpsuite
+  openvas
+  zaproxy
+  wireshark
+  sonarqube
+)
 
 native_install() {
   local label="$1"
@@ -215,9 +286,126 @@ install_impacket_pip() {
     fi
   fi
 
-  fail "Impacket installation failed. Last lines from $log:"
+  warn "Native Impacket installation failed. It can be installed by the Debian fallback."
   tail -n 12 "$log" 2>/dev/null || true
   return 1
+}
+
+find_matching_file() {
+  local pattern="$1"
+  find "$HOME" "$OPT_DIR" -maxdepth 5 -type f -iname "$pattern" -print -quit 2>/dev/null |
+    grep -q .
+}
+
+tool_detected() {
+  local key="$1"
+  local command_name="${TOOL_COMMANDS[$key]}"
+
+  command -v "$command_name" >/dev/null 2>&1 && return 0
+
+  case "$key" in
+    impacket)
+      command -v python >/dev/null 2>&1 &&
+        python -c 'import impacket' >/dev/null 2>&1
+      ;;
+    nessus)
+      command -v nessuscli >/dev/null 2>&1 ||
+        command -v nessusd >/dev/null 2>&1
+      ;;
+    burpsuite)
+      find_matching_file 'burpsuite*.jar'
+      ;;
+    openvas)
+      command -v ospd-openvas >/dev/null 2>&1 ||
+        command -v gvmd >/dev/null 2>&1 ||
+        command -v gsad >/dev/null 2>&1
+      ;;
+    zaproxy)
+      command -v zap.sh >/dev/null 2>&1 ||
+        find_matching_file 'ZAP*.jar'
+      ;;
+    wireshark)
+      command -v tshark >/dev/null 2>&1
+      ;;
+    sonarqube)
+      command -v sonar.sh >/dev/null 2>&1 ||
+        find_matching_file 'sonar-scanner*'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+print_tool_guidance() {
+  local key="$1"
+
+  case "$key" in
+    nessus)
+      warn "Tenable Nessus has no supported native Android/Termux package."
+      warn "Run Nessus on a supported Linux/Windows/macOS host or VM, then open:"
+      warn "https://SERVER-IP:8834 from the Android browser. Avoid unofficial installers."
+      ;;
+    burpsuite)
+      warn "Burp Suite was not found in the enabled Termux repositories."
+      warn "Use the official PortSwigger JAR with Java and Termux:X11:"
+      warn "pkg install openjdk-21 termux-x11-nightly"
+      warn "java -jar /path/to/burpsuite_community.jar"
+      warn "Burp Suite Professional requires a valid PortSwigger license."
+      ;;
+    openvas)
+      warn "OpenVAS/GVM needs multiple Linux services and is not a simple native Android app."
+      warn "Run Greenbone/OpenVAS in a supported Linux VM, server or container and access"
+      warn "its web interface remotely. A Kali/Debian proot may be used for experiments,"
+      warn "but service management and network capture can be limited under Android."
+      ;;
+    zaproxy)
+      warn "OWASP ZAP was not found in the enabled Termux repositories."
+      warn "Use the official cross-platform ZAP package with Java and Termux:X11,"
+      warn "or run ZAP in daemon mode on another Linux host and connect remotely."
+      ;;
+    wireshark)
+      warn "Wireshark was not installed. Current Termux package names are normally:"
+      warn "wireshark-qt (GUI, x11-repo) or tshark (CLI, root-repo)."
+      warn "For GUI use, install and start Termux:X11 before running wireshark."
+      ;;
+    sonarqube)
+      warn "SonarQube Server is best run on a supported Linux host, VM or container."
+      warn "Use SonarScanner in Termux/CI as the client and point it to that server."
+      warn "A full SonarQube server depends on a supported JVM and database service."
+      ;;
+  esac
+}
+
+install_catalog_tool() {
+  local key="$1"
+  local label="${TOOL_LABELS[$key]}"
+  local package
+  local -a candidates=()
+
+  if tool_detected "$key"; then
+    ok "$label is already available."
+    return 0
+  fi
+
+  read -r -a candidates <<< "${TOOL_PACKAGES[$key]}"
+
+  for package in "${candidates[@]}"; do
+    if ! package_available "$package"; then
+      info "$label: package '$package' is not present in the enabled Termux indexes."
+      continue
+    fi
+
+    if native_install "$label" "${TOOL_COMMANDS[$key]}" "$package"; then
+      if [ "$key" = "wireshark" ]; then
+        warn "Wireshark GUI requires a running Termux:X11 session."
+      fi
+      return 0
+    fi
+  done
+
+  print_tool_guidance "$key"
+  return 2
 }
 
 create_debian_wrapper() {
@@ -230,7 +418,7 @@ create_debian_wrapper() {
   cat > "$wrapper" <<WRAP
 #!/data/data/com.termux/files/usr/bin/bash
 cwd="\$(pwd)"
-exec proot-distro login debian --bind "\$cwd:/work" --shared-tmp -- \\
+exec proot-distro login debian --bind "\$cwd:/work" --shared-tmp -- \
   bash -lc 'cd /work && exec $guest_command "\$@"' bash "\$@"
 WRAP
   chmod 755 "$wrapper"
@@ -238,8 +426,12 @@ WRAP
 
 install_debian_fallbacks() {
   local log="$LOG_DIR/debian-fallback.log"
+  local keys=("$@")
+  local key
+  local -a deb_packages=()
+  local package_line=""
 
-  warn "Debian fallback can use several hundred MB of storage."
+  warn "Debian fallback can use several GB of storage."
   info "Installing proot-distro ..."
 
   pkg install -y proot-distro >"$log" 2>&1 || {
@@ -257,89 +449,146 @@ install_debian_fallbacks() {
     }
   fi
 
-  info "Installing John, Hashcat and Aircrack-ng inside Debian ..."
+  for key in "${keys[@]}"; do
+    case "$key" in
+      john) deb_packages+=(john) ;;
+      hashcat) deb_packages+=(hashcat) ;;
+      aircrack) deb_packages+=(aircrack-ng) ;;
+      impacket) deb_packages+=(python3-impacket) ;;
+    esac
+  done
+
+  if [ "${#deb_packages[@]}" -eq 0 ]; then
+    return 0
+  fi
+
+  printf -v package_line '%q ' "${deb_packages[@]}"
+
+  info "Installing Debian fallback packages: ${deb_packages[*]} ..."
   proot-distro login debian -- bash -lc \
-    'export DEBIAN_FRONTEND=noninteractive; apt-get update && apt-get install -y john hashcat aircrack-ng' \
+    "export DEBIAN_FRONTEND=noninteractive; apt-get update && apt-get install -y $package_line" \
     >>"$log" 2>&1 || {
       fail "Debian package installation failed."
       tail -n 15 "$log" 2>/dev/null || true
       return 1
     }
 
-  command -v john >/dev/null 2>&1 || create_debian_wrapper john john
-  command -v hashcat >/dev/null 2>&1 || create_debian_wrapper hashcat hashcat
-  command -v aircrack-ng >/dev/null 2>&1 || create_debian_wrapper aircrack-ng aircrack-ng
+  for key in "${keys[@]}"; do
+    case "$key" in
+      john)
+        command -v john >/dev/null 2>&1 || create_debian_wrapper john john
+        ;;
+      hashcat)
+        command -v hashcat >/dev/null 2>&1 || create_debian_wrapper hashcat hashcat
+        ;;
+      aircrack)
+        command -v aircrack-ng >/dev/null 2>&1 ||
+          create_debian_wrapper aircrack-ng aircrack-ng
+        ;;
+      impacket)
+        command -v impacket-smbclient >/dev/null 2>&1 ||
+          create_debian_wrapper impacket-smbclient impacket-smbclient
+        ;;
+    esac
+  done
 
   ok "Debian fallback tools installed. Current Termux directory is mounted as /work."
 }
 
 READY=0
 FAILED=0
-MISSING_HEAVY=()
+ADVISED=0
+MISSING_DEBIAN=()
 
-if native_install "Hydra" hydra hydra; then READY=$((READY+1)); else FAILED=$((FAILED+1)); fi
+for tool_key in "${TOOL_ORDER[@]}"; do
+  case "$tool_key" in
+    hydra)
+      if native_install "${TOOL_LABELS[$tool_key]}" "${TOOL_COMMANDS[$tool_key]}" hydra; then
+        READY=$((READY + 1))
+      else
+        FAILED=$((FAILED + 1))
+      fi
+      ;;
 
-if native_install "John the Ripper" john johnripper john; then
-  READY=$((READY+1))
-else
-  MISSING_HEAVY+=(john)
-fi
+    john|hashcat|aircrack)
+      read -r -a candidates <<< "${TOOL_PACKAGES[$tool_key]}"
+      if native_install "${TOOL_LABELS[$tool_key]}" "${TOOL_COMMANDS[$tool_key]}" "${candidates[@]}"; then
+        READY=$((READY + 1))
+      else
+        MISSING_DEBIAN+=("$tool_key")
+      fi
+      ;;
 
-if native_install "Hashcat" hashcat hashcat; then
-  READY=$((READY+1))
-else
-  MISSING_HEAVY+=(hashcat)
-fi
+    sqlmap)
+      if native_install "${TOOL_LABELS[$tool_key]}" "${TOOL_COMMANDS[$tool_key]}" sqlmap ||
+         install_sqlmap_upstream; then
+        READY=$((READY + 1))
+      else
+        FAILED=$((FAILED + 1))
+      fi
+      ;;
 
-if native_install "SQLmap" sqlmap sqlmap || install_sqlmap_upstream; then
-  READY=$((READY+1))
-else
-  FAILED=$((FAILED+1))
-fi
+    metasploit)
+      if native_install "${TOOL_LABELS[$tool_key]}" "${TOOL_COMMANDS[$tool_key]}" metasploit; then
+        READY=$((READY + 1))
+      else
+        ADVISED=$((ADVISED + 1))
+        warn "Metasploit is not available in your enabled official Termux indexes."
+        warn "CheckTool will not run untrusted community installer scripts automatically."
+      fi
+      ;;
 
-if native_install "Metasploit" msfconsole metasploit; then
-  READY=$((READY+1))
-else
-  FAILED=$((FAILED+1))
-  warn "Metasploit is not available in your enabled official Termux indexes."
-  warn "CheckTool will not run untrusted community installer scripts automatically."
-fi
+    nikto)
+      if native_install "${TOOL_LABELS[$tool_key]}" "${TOOL_COMMANDS[$tool_key]}" nikto ||
+         install_nikto_upstream; then
+        READY=$((READY + 1))
+      else
+        FAILED=$((FAILED + 1))
+      fi
+      ;;
 
-if native_install "Aircrack-ng" aircrack-ng aircrack-ng; then
-  READY=$((READY+1))
-else
-  MISSING_HEAVY+=(aircrack-ng)
-fi
+    impacket)
+      read -r -a candidates <<< "${TOOL_PACKAGES[$tool_key]}"
+      if native_install "${TOOL_LABELS[$tool_key]}" "${TOOL_COMMANDS[$tool_key]}" "${candidates[@]}" ||
+         install_impacket_pip; then
+        READY=$((READY + 1))
+      else
+        MISSING_DEBIAN+=("$tool_key")
+      fi
+      ;;
 
-if native_install "Nikto" nikto nikto || install_nikto_upstream; then
-  READY=$((READY+1))
-else
-  FAILED=$((FAILED+1))
-fi
+    nessus|burpsuite|openvas|zaproxy|wireshark|sonarqube)
+      install_catalog_tool "$tool_key"
+      catalog_status=$?
+      if [ "$catalog_status" -eq 0 ]; then
+        READY=$((READY + 1))
+      elif [ "$catalog_status" -eq 2 ]; then
+        ADVISED=$((ADVISED + 1))
+      else
+        FAILED=$((FAILED + 1))
+      fi
+      ;;
+  esac
+done
 
-if native_install "Impacket" impacket-smbclient python-impacket impacket || install_impacket_pip; then
-  READY=$((READY+1))
-else
-  FAILED=$((FAILED+1))
-fi
-
-if [ "${#MISSING_HEAVY[@]}" -gt 0 ]; then
+if [ "${#MISSING_DEBIAN[@]}" -gt 0 ]; then
   if [ "$USE_DEBIAN" -eq 1 ]; then
-    if install_debian_fallbacks; then
-      READY=$((READY + ${#MISSING_HEAVY[@]}))
+    if install_debian_fallbacks "${MISSING_DEBIAN[@]}"; then
+      READY=$((READY + ${#MISSING_DEBIAN[@]}))
     else
-      FAILED=$((FAILED + ${#MISSING_HEAVY[@]}))
+      FAILED=$((FAILED + ${#MISSING_DEBIAN[@]}))
     fi
   else
-    FAILED=$((FAILED + ${#MISSING_HEAVY[@]}))
-    warn "Unavailable natively: ${MISSING_HEAVY[*]}"
+    ADVISED=$((ADVISED + ${#MISSING_DEBIAN[@]}))
+    warn "Unavailable natively: ${MISSING_DEBIAN[*]}"
     warn "Run 'checktool --debian' to install these through a Debian proot fallback."
   fi
 fi
 
 printf '\n%b%s%b\n' "$C_CYAN" '================ SUMMARY ================' "$C_RESET"
 printf 'Ready tools: %d\n' "$READY"
-printf 'Unavailable/failed tools: %d\n' "$FAILED"
+printf 'Guidance-only/unavailable tools: %d\n' "$ADVISED"
+printf 'Failed installations: %d\n' "$FAILED"
 printf 'Logs: %s\n' "$LOG_DIR"
 printf '\n'
 
