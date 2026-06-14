@@ -4,10 +4,10 @@ Architecture: all
 Maintainer: Ali
 Depends: bash, coreutils, apt
 Filename: ./checktool.deb
-Size: 3636
-MD5sum: 9bce2d26bf00902e573ccc75bc575ba3
-SHA1: 875cab4f423e0663e019733f6fa8a8ca5f9e6cda
-SHA256: cca03016939e07c18d2b4ff5bbd4a92b5b130f6e554a2f50ef3008c85ad4f8e4
+Size: 5268
+MD5sum: bc76edea1cfa0890c1f0ce39dbe9135c
+SHA1: 9ae95454e6dd0a66e8df47c5a67e83119c7cdde9
+SHA256: ef7f0981fc5514eb3781247bb4ca23c3ab869fc9fc7af5bb0e5ea1b7221e9509
 Homepage: https://github.com/ly5851575-oss/termux-apt-repo
 Description: CheckTool installer and diagnostics for Termux security utilities
 
