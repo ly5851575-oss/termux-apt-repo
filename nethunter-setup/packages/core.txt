@@ -1,0 +1,20 @@
+# أساسيات النظام والتحليل
+ca-certificates
+curl
+wget
+git
+jq
+file
+less
+nano
+vim-tiny
+python3
+python3-pip
+python3-venv
+perl
+ruby
+build-essential
+pkg-config
+openssl
+dnsutils
+whois

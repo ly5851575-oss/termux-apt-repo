@@ -1,0 +1,9 @@
+# تحليل الملفات والأدلة الرقمية
+binutils
+binwalk
+foremost
+exiftool
+yara
+sleuthkit
+strace
+ltrace

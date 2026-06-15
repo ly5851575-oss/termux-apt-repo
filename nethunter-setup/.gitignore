@@ -1,0 +1,5 @@
+*.tar.xz
+*.sha512sum
+*.aria2
+*.log
+.env

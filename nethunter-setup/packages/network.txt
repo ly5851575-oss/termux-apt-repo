@@ -1,0 +1,9 @@
+# تشخيص الشبكات والبروتوكولات
+traceroute
+mtr-tiny
+socat
+tcpdump
+dnsutils
+whois
+iproute2
+iputils-ping

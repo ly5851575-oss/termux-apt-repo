@@ -1,0 +1,4 @@
+# تدقيق محلي لإعدادات كلمات المرور والتشفير
+openssl
+libpam-pwquality
+python3
