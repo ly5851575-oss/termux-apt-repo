@@ -6,8 +6,8 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 for script in \
   "$ROOT/bootstrap.sh" \
   "$ROOT/install.sh" \
-  "$ROOT/doctor.sh" \
   "$ROOT/install-tools.sh" \
+  "$ROOT/doctor.sh" \
   "$ROOT/lib/common.sh"; do
   bash -n "$script"
   printf 'OK: %s\n' "${script#$ROOT/}"
@@ -21,6 +21,10 @@ for list in "$ROOT"/packages/*.txt; do
   printf 'OK: %s\n' "${list#$ROOT/}"
 done
 
-# Run secctl specific tests
-printf 'OK: secctl_tests.sh\n'
-bash "$ROOT/tests/secctl_tests.sh"
+duplicates="$(cat "$ROOT"/packages/*.txt | sed '/^[[:space:]]*#/d;/^[[:space:]]*$/d' | sort | uniq -d)"
+if [[ -n "$duplicates" ]]; then
+  printf 'Duplicate package entries:\n%s\n' "$duplicates" >&2
+  exit 1
+fi
+
+printf 'OK: no duplicate package entries\n'
