@@ -6,6 +6,7 @@ NH_OFFICIAL_INSTALLER_URL="https://gitlab.com/kalilinux/nethunter/build-scripts/
 NH_ROOTFS_BASE_URL="https://kali.download/nethunter-images/current/rootfs"
 NH_CACHE_DIR="${HOME}/.cache/nethunter-setup"
 NH_LOG_DIR="${HOME}/.local/state/nethunter-setup"
+NH_REPORT_DIR="${HOME}/security-reports"
 
 C_RESET='\033[0m'
 C_RED='\033[1;31m'
@@ -68,7 +69,7 @@ retry() {
 }
 
 prepare_dirs() {
-  mkdir -p "$NH_CACHE_DIR" "$NH_LOG_DIR"
+  mkdir -p "$NH_CACHE_DIR" "$NH_LOG_DIR" "$NH_REPORT_DIR"
 }
 
 safe_timestamp() { date '+%Y%m%d-%H%M%S'; }

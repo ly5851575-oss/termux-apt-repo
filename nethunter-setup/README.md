@@ -1,11 +1,58 @@
-# NetHunter Setup
+# NetHunter Setup & secctl Command Center
 
-Utilities for validating downloads, checking extracted files, and diagnosing a Kali NetHunter Rootless installation in Termux.
+نظام متكامل وموثوق لتثبيت وإدارة Kali NetHunter Rootless على Termux، مع واجهة أوامر مركزية (`secctl`) مصممة لمهندسي DevSecOps والأمن السيبراني الدفاعي.
 
-Files:
-- `install.sh`: installation workflow.
-- `doctor.sh`: environment and archive checks.
-- `install-tools.sh`: optional package profiles.
-- `packages/`: package profile definitions.
+## التثبيت
 
-Use only in environments you own or are authorized to administer.
+لتثبيت النظام وإعداد واجهة الأوامر المركزية `secctl`، قم بتشغيل الأمر التالي داخل Termux:
+
+```bash
+bash install.sh
+bash bin/secctl setup
+```
+
+بمجرد التثبيت، يمكنك استخدام الأمر `secctl` من أي مكان في Termux.
+
+## الأوامر المتاحة (secctl)
+
+يوفر `secctl` مجموعة من الأوامر لإدارة بيئة NetHunter وأدوات الأمان:
+
+*   `secctl setup`: يثبت رابط الأمر داخل `$PREFIX/bin/secctl` ويتحقق من بيئة Termux.
+*   `secctl install [--profile <profile>]`: يثبت الأدوات الدفاعية المختارة (مثل `core`, `web`, `network`, `forensics`, `audit`, `system_audit`, `code_supply_chain`, `all`). يتحقق من الحزم المثبتة مسبقًا لتجنب التكرار.
+*   `secctl doctor`: يفحص سلامة النظام (DNS، الاتصال، rootfs، الملفات الأساسية، dpkg، المساحة) ويقدم حلولاً للمشاكل.
+*   `secctl status`: يعرض حالة النظام، المعمارية، الأدوات المثبتة والمفقودة، وحالة NetHunter.
+*   `secctl inventory`: ينشئ قائمة جرد شاملة لحزم dpkg والملفات التنفيذية ونسخ الأدوات، ويحفظها بصيغ TSV وJSON وMarkdown.
+*   `secctl report`: ينشئ تقريرًا أمنيًا مفصلاً (بدون بيانات حساسة) في `~/security-reports/`.
+*   `secctl ai`: يرسل تقرير النظام إلى واجهة ذكاء اصطناعي (متوافقة مع OpenAI API) للحصول على توصيات أمنية.
+*   `secctl update`: يحدث ملفات المستودع والأدوات، مع إنشاء نسخ احتياطية لملفات الإعداد.
+*   `secctl cleanup [--remove-kali]`: يحذف السجلات والملفات المؤقتة. استخدم `--remove-kali` لحذف بيئة Kali بالكامل (يتطلب تأكيدًا).
+*   `secctl version`: يعرض إصدار الأداة.
+
+## ربط الذكاء الاصطناعي (secctl ai)
+
+للاستفادة من ميزة تحليل التقارير عبر الذكاء الاصطناعي، يجب إعداد متغيرات البيئة التالية:
+
+1.  قم بإنشاء ملف `.env` في مسار التشغيل (أو استخدم `secctl ai` لإنشاء ملف `.env.example` كقالب).
+2.  أضف المتغيرات التالية:
+    ```env
+    AI_BASE_URL=https://api.openai.com/v1
+    AI_API_KEY=your_api_key_here
+    AI_MODEL=gpt-4o
+    ```
+3.  **تحذير:** لا تقم أبدًا برفع ملف `.env` أو مفاتيح API إلى GitHub أو أي مستودع عام.
+
+يقوم `secctl ai` بتصفية البيانات الحساسة من التقرير قبل إرساله، ولا ينفذ أي أوامر مقترحة دون تأكيد صريح منك.
+
+## حدود NetHunter Rootless
+
+*   لا يدعم بعض ميزات الشبكات المتقدمة التي تتطلب صلاحيات Root حقيقية (مثل وضع Promiscuous في بعض بطاقات الشبكة).
+*   يعمل داخل بيئة `proot`، مما قد يؤثر على أداء بعض الأدوات التي تعتمد على استدعاءات نظام معينة.
+*   لا يمكنه تعديل ملفات النظام الأساسية لجهاز Android.
+
+## الاستخدام القانوني والمصرح فقط
+
+**تنبيه هام:** هذه الأدوات مصممة حصريًا لأغراض الأمن السيبراني الدفاعي، DevSecOps، والتدقيق الأمني المصرح به.
+
+*   يجب ألا يتم استخدام هذه الأدوات لفحص أو مهاجمة أي أنظمة أو شبكات دون إذن كتابي صريح من المالك.
+*   يجب تحديد الأهداف المصرح بها في ملف `AUTHORIZED_TARGETS.txt` قبل إجراء أي فحوصات شبكية.
+*   المستخدم يتحمل المسؤولية الكاملة عن أي استخدام غير قانوني أو غير مصرح به لهذه الأدوات.

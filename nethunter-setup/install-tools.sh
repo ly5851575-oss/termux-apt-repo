@@ -18,6 +18,8 @@ usage() {
   network    أدوات الشبكات والتشخيص
   forensics  التحليل الجنائي والملفات
   audit      تدقيق كلمات المرور المصرح به
+  system_audit تدقيق النظام
+  code_supply_chain فحص الكود وسلسلة التوريد
   all        جميع الملفات السابقة
 USAGE
 }
@@ -36,7 +38,7 @@ ensure_termux
 command -v nethunter >/dev/null 2>&1 || die "NetHunter غير مثبت أو أمر nethunter غير موجود."
 
 profiles=("$PROFILE")
-[[ "$PROFILE" == "all" ]] && profiles=(core web network forensics audit)
+[[ "$PROFILE" == "all" ]] && profiles=(core web network forensics audit system_audit code_supply_chain)
 
 packages=()
 for profile in "${profiles[@]}"; do

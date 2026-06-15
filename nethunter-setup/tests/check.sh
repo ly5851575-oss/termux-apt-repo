@@ -20,3 +20,7 @@ for list in "$ROOT"/packages/*.txt; do
   fi
   printf 'OK: %s\n' "${list#$ROOT/}"
 done
+
+# Run secctl specific tests
+printf 'OK: secctl_tests.sh\n'
+bash "$ROOT/tests/secctl_tests.sh"

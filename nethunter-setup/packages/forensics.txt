@@ -1,9 +1,8 @@
-# تحليل الملفات والأدلة الرقمية
-binutils
+yara
 binwalk
 foremost
-exiftool
-yara
 sleuthkit
+libimage-exiftool-perl
 strace
 ltrace
+binutils
