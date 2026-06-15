@@ -14,7 +14,7 @@ for script in \
 done
 
 for list in "$ROOT"/packages/*.txt; do
-  if grep -Ev '^[[:space:]]*(#|$|[a-z0-9][a-z0-9+.-]*)[[:space:]]*$' "$list"; then
+  if grep -Ev '^[[:space:]]*(#.*|[a-z0-9][a-z0-9+.-]*|)[[:space:]]*$' "$list"; then
     printf 'Invalid package-list line in %s\n' "$list" >&2
     exit 1
   fi
