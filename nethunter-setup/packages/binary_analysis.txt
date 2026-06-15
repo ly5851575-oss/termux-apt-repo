@@ -1,0 +1,6 @@
+# تحليل البرامج
+radare2
+gdb
+valgrind
+patchelf
+upx-ucl
