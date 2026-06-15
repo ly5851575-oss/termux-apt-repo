@@ -1,9 +1,16 @@
-# تحليل الملفات والأدلة الرقمية
-binutils
+# التحليل الجنائي وتحليل البرامج
+yara
 binwalk
 foremost
-exiftool
-yara
 sleuthkit
+libimage-exiftool-perl
 strace
 ltrace
+binutils
+bulk-extractor
+scalpel
+radare2
+gdb
+valgrind
+patchelf
+upx-ucl

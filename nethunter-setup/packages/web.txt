@@ -1,8 +1,12 @@
-# تشخيص تطبيقات الويب بصورة دفاعية
-curl
-wget
-openssl
-jq
-python3
-python3-requests
-httpie
+# تدقيق تطبيقات الويب المصرح به
+whatweb
+nikto
+wafw00f
+testssl.sh
+nuclei
+httpx-toolkit
+ffuf
+gobuster
+feroxbuster
+dirsearch
+sslscan

@@ -3,3 +3,5 @@
 *.aria2
 *.log
 .env
+AUTHORIZED_TARGETS.txt
+security-reports/

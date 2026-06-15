@@ -1,0 +1,7 @@
+# تدقيق النظام والملفات
+lynis
+rkhunter
+clamav
+debsums
+needrestart
+chkrootkit

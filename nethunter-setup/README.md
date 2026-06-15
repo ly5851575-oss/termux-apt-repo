@@ -1,11 +1,38 @@
-# NetHunter Setup
+# NetHunter Tools Catalog
 
-Utilities for validating downloads, checking extracted files, and diagnosing a Kali NetHunter Rootless installation in Termux.
+مجموعة منظمة لتثبيت أدوات Kali NetHunter Rootless على Termux من دون حذف الأدوات الموجودة، مع منع تكرار أسماء الحزم بين القوائم.
 
-Files:
-- `install.sh`: installation workflow.
-- `doctor.sh`: environment and archive checks.
-- `install-tools.sh`: optional package profiles.
-- `packages/`: package profile definitions.
+## التثبيت بأمر واحد
 
-Use only in environments you own or are authorized to administer.
+من Termux داخل مجلد المشروع:
+
+```bash
+cd ~/termux-apt-repo/nethunter-setup
+bash install-tools.sh --profile all --yes
+```
+
+## ملفات الأدوات
+
+- `core`: أساسيات النظام والبناء والتحرير.
+- `web`: أدوات تدقيق تطبيقات الويب المصرح به.
+- `network`: تشخيص الشبكات والحزم.
+- `forensics`: التحليل الجنائي وتحليل البرامج.
+- `audit`: فحوصات الجودة المحلية.
+- `system_audit`: تدقيق النظام والملفات.
+- `code_supply_chain`: تحليل الكود وسلسلة التوريد.
+
+## التحقق من القوائم
+
+```bash
+bash tests/check.sh
+```
+
+الاختبار يفحص صياغة السكربتات، صحة أسماء الحزم، ويمنع وجود اسم مكرر في أكثر من قائمة.
+
+## سياسة المشروع
+
+- لا يوجد تكامل ذكاء اصطناعي أو إرسال تقارير إلى خدمات خارجية.
+- لا تُحذف أداة موجودة عند إضافة أدوات جديدة.
+- يُزال فقط الإدخال المكرر من قوائم الحزم.
+- استخدم الأدوات فقط على الأنظمة والشبكات التي تملكها أو لديك تصريح مكتوب لاختبارها.
+- NetHunter Rootless لا يمنح Root حقيقيًا لأندرويد، لذلك تبقى بعض قدرات الشبكات منخفضة المستوى محدودة.

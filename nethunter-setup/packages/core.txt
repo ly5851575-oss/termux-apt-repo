@@ -1,4 +1,4 @@
-# أساسيات النظام والتحليل
+# أساسيات النظام والتحليل والبناء
 ca-certificates
 curl
 wget
@@ -8,13 +8,19 @@ file
 less
 nano
 vim-tiny
+ripgrep
+openssl
 python3
 python3-pip
 python3-venv
-perl
+python3-requests
+pipx
+golang-go
 ruby
+perl
 build-essential
 pkg-config
-openssl
+shellcheck
 dnsutils
 whois
+httpie
