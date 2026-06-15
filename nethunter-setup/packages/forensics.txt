@@ -1,4 +1,4 @@
-# التحليل الجنائي للملفات
+# التحليل الجنائي وتحليل البرامج
 yara
 binwalk
 foremost
@@ -9,3 +9,8 @@ ltrace
 binutils
 bulk-extractor
 scalpel
+radare2
+gdb
+valgrind
+patchelf
+upx-ucl
