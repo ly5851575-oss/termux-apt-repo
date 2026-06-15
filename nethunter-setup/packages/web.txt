@@ -1,0 +1,8 @@
+# تشخيص تطبيقات الويب بصورة دفاعية
+curl
+wget
+openssl
+jq
+python3
+python3-requests
+httpie
