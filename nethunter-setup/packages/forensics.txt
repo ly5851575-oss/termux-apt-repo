@@ -1,3 +1,4 @@
+# التحليل الجنائي للملفات
 yara
 binwalk
 foremost
@@ -6,3 +7,5 @@ libimage-exiftool-perl
 strace
 ltrace
 binutils
+bulk-extractor
+scalpel
