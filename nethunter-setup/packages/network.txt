@@ -1,11 +1,12 @@
+# تشخيص الشبكات والبروتوكولات
 nmap
 tcpdump
 tshark
 socat
 traceroute
 mtr-tiny
-dnsutils
-whois
 iproute2
 iputils-ping
 netcat-openbsd
+arp-scan
+net-tools
